@@ -679,7 +679,6 @@ func (r *AllocRunner) setTaskState(taskName, state string, event *structs.TaskEv
 	case structs.TaskStateDead:
 		// Capture the finished time. If it has never started there is no finish
 		// time
-		metrics.IncrCounter([]string{"client", "allocs", r.alloc.Job.Name, r.alloc.TaskGroup, taskName, "dead"}, 1)
 		if !taskState.StartedAt.IsZero() {
 			taskState.FinishedAt = time.Now().UTC()
 		}
@@ -754,9 +753,6 @@ func (r *AllocRunner) Run() {
 	defer close(r.waitCh)
 	go r.dirtySyncState()
 
-	// Increment alloc runner start counter. Incr'd even when restoring existing tasks so 1 start != 1 task execution
-	metrics.IncrCounter([]string{"client", "allocs", r.alloc.Job.Name, r.alloc.TaskGroup, "start"}, 1)
-
 	// Find the task group to run in the allocation
 	alloc := r.Alloc()
 	tg := alloc.Job.LookupTaskGroup(alloc.TaskGroup)
@@ -810,6 +806,9 @@ func (r *AllocRunner) Run() {
 		r.logger.Printf("[DEBUG] client: terminating runner for alloc '%s'", r.allocID)
 		return
 	}
+
+	// Increment alloc runner start counter. Incr'd even when restoring existing tasks so 1 start != 1 task execution
+	metrics.IncrCounter([]string{"client", "allocs", r.alloc.Job.Name, r.alloc.TaskGroup, "start"}, 1)
 
 	// Start the watcher
 	wCtx, watcherCancel := context.WithCancel(r.ctx)
